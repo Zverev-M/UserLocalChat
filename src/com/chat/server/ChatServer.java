@@ -99,12 +99,8 @@ public class ChatServer extends JFrame implements TCPConnectionListener {
                 extraThreadServer.start();
                 extraThreadUser.start();
 
-                if (!extraThreadServer.isAlive()) {
-                    extraThreadServer.interrupt();
-                }
-                if (!extraThreadUser.isAlive()) {
-                    extraThreadUser.interrupt();
-                }
+                extraThreadServer.interrupt();
+                extraThreadUser.interrupt();
             }
             case "GET_LIST" -> {
                 File dir = new File(DIRECTORY_PATH);

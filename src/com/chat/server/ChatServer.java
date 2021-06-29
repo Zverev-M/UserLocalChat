@@ -1,10 +1,14 @@
 package com.chat.server;
 
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.*;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.net.*;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Enumeration;
 
 import com.chat.network.TCPConnection;
 import com.chat.network.TCPConnectionListener;
@@ -13,6 +17,8 @@ import javax.swing.*;
 
 public class ChatServer extends JFrame implements TCPConnectionListener {
     private final static String DIRECTORY_PATH = "D:/LocalUserChat/Files";
+    private static String network;
+    private static String mask;
     private final static int FILE_SIZE = 5242880; //5 Mb
     private final static int MAIN_PORT = 7777;
     private final static int FILE_RECEPTION_PORT = 11111;
@@ -21,6 +27,45 @@ public class ChatServer extends JFrame implements TCPConnectionListener {
     private final ArrayList<TCPConnection> connections;
 
     private ChatServer() {
+        JPanel loginPanel = new JPanel(new GridBagLayout());
+        JTextField networkField = new JTextField(16);
+        JTextField maskField = new JTextField(16);
+        GridBagConstraints gbc = new GridBagConstraints(
+                0, 0, 1, 1, 0, 0,
+                GridBagConstraints.BASELINE_TRAILING,
+                GridBagConstraints.NONE,
+                new Insets(5, 5, 5, 5), 4, 6);
+        loginPanel.add(new JLabel("Network"), gbc);
+        gbc.gridy = 1;
+        loginPanel.add(new JLabel("Mask"), gbc);
+        gbc.anchor = GridBagConstraints.BASELINE_LEADING;
+        gbc.gridx = 1;
+        gbc.gridy = 0;
+        loginPanel.add(networkField, gbc);
+        gbc.gridy = 1;
+        loginPanel.add(maskField, gbc);
+        JFrame frame = new JFrame("Server Settings");
+        frame.setSize(300, 300);
+        JButton save = new JButton("Save");
+        save.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (!networkField.getText().equals("") && !maskField.getText().equals("")) {
+                    network = networkField.getText();
+                    mask = maskField.getText();
+                    frame.dispose();
+                    setVisible(true);
+                }
+
+            }
+        });
+        frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        frame.add(loginPanel);
+        frame.add(save, BorderLayout.SOUTH);
+        frame.setLocationRelativeTo(null);
+        frame.setAlwaysOnTop(true);
+        frame.setVisible(true);
+
         System.out.println("Server running...");
 
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
@@ -30,13 +75,18 @@ public class ChatServer extends JFrame implements TCPConnectionListener {
         setTitle("Server");
 
         getContentPane().add(new JLabel("Server is running until you close this window..."));
-        setVisible(true);
+
 
         connections = new ArrayList<>();
         try(ServerSocket serverSocket = new ServerSocket(MAIN_PORT)) {
             while(true) {
                 try {
-                    new TCPConnection(this, serverSocket.accept());
+                    Socket socket = serverSocket.accept();
+                    if (checkNewConnection(socket)) {
+                        new TCPConnection(this, socket);
+                    } else {
+                        socket.close();
+                    }
                 } catch (IOException e) {
                     System.out.println("Exception: " + e);
                 }
@@ -147,6 +197,23 @@ public class ChatServer extends JFrame implements TCPConnectionListener {
         }
     }
 
+    private boolean checkNewConnection(Socket socket) throws SocketException {
+        String address = socket.getInetAddress().toString();
+        address = address.substring(1);
+        ArrayList<String> addressArray = new ArrayList<String>(Arrays.asList(address.split("\\.")));
+        ArrayList<String> maskArray = new ArrayList<String>(Arrays.asList(mask.split("\\.")));
+        StringBuilder result = new StringBuilder();
+
+        for (int i = 0; i < 4; i++) {
+            int a = Integer.parseInt(addressArray.get(i));
+            int b = Integer.parseInt(maskArray.get(i));
+
+            result.append(a & b).append(".");
+        }
+        result.deleteCharAt(result.length() - 1);
+        return result.toString().equals(network);
+    }
+
     private void getFileFromUser(String filePath) throws IOException {
         int bytesRead;
         int current = 0;
@@ -159,6 +226,7 @@ public class ChatServer extends JFrame implements TCPConnectionListener {
             System.out.println("Waiting for file...");
 
             sock = serverSocket.accept();
+
 
             byte [] myByteArray  = new byte [FILE_SIZE];
             InputStream is = sock.getInputStream();

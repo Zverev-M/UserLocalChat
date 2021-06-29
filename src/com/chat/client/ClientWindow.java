@@ -2,14 +2,12 @@ package com.chat.client;
 
 import com.chat.network.TCPConnection;
 import com.chat.network.TCPConnectionListener;
-import com.chat.server.ChatServer;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.*;
-import java.net.ServerSocket;
 import java.net.Socket;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
